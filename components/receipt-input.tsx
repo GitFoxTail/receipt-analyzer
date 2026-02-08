@@ -43,7 +43,7 @@ export function ReceiptInput() {
     }
 
     return (
-        <div className="flex flex-col gap-5 p-5 w-3/4">
+                    <div className="flex flex-col gap-5 p-5">
             <h1 className="text-3xl">レシート構造化 by gemini API</h1>
             <h2>モデル選択</h2>
             <select
