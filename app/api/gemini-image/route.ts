@@ -12,6 +12,7 @@ const receiptItemSchema = z.object({
     name: z.string().describe("Item name as printed on the receipt."),
     amount: z.number().describe("Amount in JPY. Discounts should be negative"),
     type: z.enum(["item", "discount", "tax"]).describe("Item: purchased product, discount: discount or coupon, tax: consumption tax"),
+    category: z.enum(["food", "restaurant", "goods", "child goods", "other"]).describe("category of items."),
 });
 
 const receiptSchema = z.object({
@@ -23,8 +24,8 @@ const receiptSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+    // リクエストの内容をjsonにパース
     const body = await req.json();
-    console.log(body);
     const response = await fetchGemini(body.prompt, body.model, body.image);
     return NextResponse.json({ message: response });
 }
