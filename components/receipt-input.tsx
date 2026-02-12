@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Camera, Trash2 } from "lucide-react";
 
 interface Item {
     name: string;
     amount: number;
-    type: string;
     category: string;
 }
 
@@ -92,7 +91,13 @@ export function ReceiptInput() {
             );
 
             const data = await response.json();         // json
+
+            if (!response.ok) {
+                throw new Error(data.error || "server error");
+            }
+
             const message = JSON.parse(data.message);   // json
+
             setStore(message.store_name);
             setItems(message.items);
             setTotalPrice(message.total);
@@ -105,12 +110,18 @@ export function ReceiptInput() {
             setIsLoading(false);
         } catch (error) {
             console.error(error);
-            setOutput(String(error));
+            setOutput(error instanceof Error ? error.message : "unknown error");
+            setIsLoading(false);
         }
     }
 
     const handleChangeModelSelector = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setModel(e.target.value);
+    }
+
+    const handleRemoveImage = () => {
+        setBase64("");
+        setPreviewUrl("");
     }
 
     return (
@@ -130,48 +141,89 @@ export function ReceiptInput() {
                 <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 flash preview</option>
                 <option value="gemini-2.5-flash-lite">Gemini 2.5 flash lite</option>
                 <option value="gemini-2.5-flash-lite-preview-09-2025">Gemini 2.5 flash lite preview</option>
-                <option value="gemini-2.0-flash">✖ Gemini 2.0 flash</option>
-                <option value="gemini-2.0-flash-lite">✖ Gemini 2.0 flash lite</option>
                 <option value="gemma-3-27b-it">Gemma 3</option>
             </select>
 
             <h2 className="bg-gray-700 text-white px-3">レシート入力</h2>
-            <form onSubmit={handleFileSubmit} className="flex flex-col gap-1">
-                <div className="flex justify-end mr-3 mb-3">
-                    <button
-                        type="submit"
-                        className="border border-2 rounded w-30 h-12 bg-gray-200 hover:bg-gray-300 cursor-pointer"
-                    >
-                        {isLoading ? <div className="flex ml-3"><div className="w-6 h-6 mr-2 border-4 border-gray-300 border-t-gray-700 rounded-full animate-spin" />生成中</div>
-                            : "送信"}
-                    </button>
-                </div>
-                <div className="flex mx-3">
-                    <div className={`flex justify-center ${previewUrl ? "w-1/2" : "w-full"}`}>
-                        <input
-                            id="file-upload"
-                            className="hidden"
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                        />
-                        <label
-                            htmlFor="file-upload"
-                            className="flex items-center justify-center w-3/4 h-16 border border-gray-300 border-3 rounded cursor-pointer"
-                        >
-                            <ImagePlus />
-                        </label>
-                    </div>
+            <form onSubmit={handleFileSubmit} className="grid grid-cols-4">
+                <div className="flex col-span-3 mx-3">
+                    {!previewUrl && (
+                        <div className="flex w-full">
+                            <input
+                                id="file-upload"
+                                className="hidden"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                            />
+
+                            <label
+                                htmlFor="file-upload"
+                                className="
+                                    flex items-center justify-center gap-3
+                                    w-full h-14
+                                    bg-gradient-to-r from-gray-100 to-gray-200
+                                    border border-gray-200
+                                    rounded-2xl
+                                    shadow-md
+                                    font-semibold text-gray-800
+                                    cursor-pointer
+                                    transition-all duration-150
+                                    active:scale-95
+                                "
+                            >
+                                <Camera className="w-5 h-5 text-gray-700" />
+                                写真を追加
+                            </label>
+
+                        </div>
+
+                    )}
                     {previewUrl && (
-                        <div className="flex justify-center border w-1/2">
-                            <div className="h-20 overflow-y-auto border">
+                        <div className="relative w-full flex justify-center">
+                            <div className="h-32 overflow-y-auto rounded-xl border shadow-sm">
                                 <img
                                     src={previewUrl}
                                     alt="Preview"
                                     className="max-w-full h-auto" />
                             </div>
+                            <button
+                                type="button"
+                                className="
+                                    absolute top-2 right-2
+                                    bg-black/60 text-white rounded-full p-2
+                                    backdrop-blur-sm
+                                    hover:bg-black/80
+                                    active:scale-90
+                                    transition"
+                                onClick={handleRemoveImage}
+                            >
+                                <Trash2 size={18} />
+                            </button>
                         </div>
                     )}
+
+                </div>
+                <div className="flex flex-col gap-3 mx-2">
+                    <button
+                        type="submit"
+                        className={`
+                            border border-2
+                            rounded-2xl w-full h-12 text-sm font-bold
+                            cursor-pointer
+                            hover:bg-gray-300
+                            transition-all duration-150    
+                            ${base64 === "" ? "border-gray-300 bg-gray-200 text-gray-400" : "border-gray-500 bg-gray-200 text-gray-600 shadow-md active:scale-95"}
+                        `}
+                    >
+                        {isLoading
+                            ? <div className="flex">
+                                <span className="w-4 h-4 mx-1 border-4 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
+                                <span>生成中</span>
+                            </div>
+                            : <span>送信</span>
+                        }
+                    </button>
                 </div>
             </form>
 
@@ -189,37 +241,38 @@ export function ReceiptInput() {
                     )
                 }
 
-                <table className="w-full text-xs">
-                    <thead className="">
-                        <tr>
-                            <th className="border">タイプ</th>
-                            <th className="border">項目名</th>
-                            <th className="border">金額</th>
-                            <th className="border">カテゴリ</th>
+                <table className="w-full text-xs table-fixed">
+                    <thead className="w-full">
+                        <tr className="bg-gray-500 text-white h-8">
+                            <th className="w-1/4">カテゴリ</th>
+                            <th className="w-1/2">項目名</th>
+                            <th className="w-1/4">金額</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="w-full">
                         {items.map((item: Item, index: number) => {
                             return (
-                                <tr key={index}>
-                                    <td className="border text-start px-2">
+                                <tr key={index} className="border-b border-gray-300 h-12">
+                                    <td className="text-start w-1/4">
                                         <select
-                                            value={item.type}
+                                            value={item.category}
                                             onChange={(e) => {
                                                 const newItems: Array<Item> | [] = [...items];
-                                                newItems[index].type = e.target.value;
+                                                newItems[index].category = e.target.value;
                                                 setItems(newItems);
                                             }}
-                                            className="border border-gray-300 w-12"
+                                            className="h-10 mx-1 border rounded border-gray-300"
                                         >
-                                            <option value="item">item</option>
-                                            <option value="discount">discount</option>
-                                            <option value="tax">tax</option>
+                                            <option value="food">🔴食費</option>
+                                            <option value="restaurant">🔴外食</option>
+                                            <option value="goods">🟢日用品</option>
+                                            <option value="child goods">🟢子育て</option>
+                                            <option value="other">⚪その他</option>
                                         </select>
                                     </td>
-                                    <td className="border text-start p-2">
+                                    <td className="w-1/2 px-1">
                                         <input
-                                            className="w-full border-gray-300 border"
+                                            className="h-10 w-full border rounded border-gray-300"
                                             value={item.name}
                                             onChange={(e) => {
                                                 const newItems: Array<Item> | [] = [...items];
@@ -228,9 +281,9 @@ export function ReceiptInput() {
                                             }}
                                         />
                                     </td>
-                                    <td className="border text-end px-2 w-12">
+                                    <td className="w-1/4 px-1">
                                         <input
-                                            className="w-full border-gray-300 border"
+                                            className="h-10 w-full border rounded border-gray-300"
                                             value={item.amount}
                                             onChange={(e) => {
                                                 const newItems: Array<Item> | [] = [...items];
@@ -240,27 +293,10 @@ export function ReceiptInput() {
                                                     items.reduce(
                                                         (
                                                             sum: number,
-                                                            item: { name: string, amount: number, type: string }
+                                                            item: { name: string, amount: number }
                                                         ) => sum + item.amount, 0))
                                             }}
                                         />
-                                    </td>
-                                    <td className="border text-start px-1">
-                                        <select
-                                            value={item.category}
-                                            onChange={(e) => {
-                                                const newItems: Array<Item> | [] = [...items];
-                                                newItems[index].category = e.target.value;
-                                                setItems(newItems);
-                                            }}
-                                            className="border border-gray-300 w-14"
-                                        >
-                                            <option value="food">食費</option>
-                                            <option value="restaurant">外食</option>
-                                            <option value="goods">日用品</option>
-                                            <option value="child goods">子育て</option>
-                                            <option value="other">その他</option>
-                                        </select>
                                     </td>
                                 </tr>
                             )
@@ -268,7 +304,6 @@ export function ReceiptInput() {
                     </tbody>
                 </table>
             </div>
-
         </div>
     );
 }

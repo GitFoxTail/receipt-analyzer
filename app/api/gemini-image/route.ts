@@ -11,23 +11,30 @@ interface ImageBase64 {
 const receiptItemSchema = z.object({
     name: z.string().describe("Item name as printed on the receipt."),
     amount: z.number().describe("Amount in JPY. Discounts should be negative"),
-    type: z.enum(["item", "discount", "tax"]).describe("Item: purchased product, discount: discount or coupon, tax: consumption tax"),
     category: z.enum(["food", "restaurant", "goods", "child goods", "other"]).describe("category of items."),
 });
 
 const receiptSchema = z.object({
     store_name: z.string().optional().describe("Name of the store"),
     items: z.array(receiptItemSchema).describe("Line items on the receipt."),
-    subtotal: z.number().optional().describe("Subtotal before tax and discounts."),
     total: z.number().describe("Final total amount paid."),
     currency: z.literal("JPY"),
 });
 
 export async function POST(req: NextRequest) {
-    // リクエストの内容をjsonにパース
-    const body = await req.json();
-    const response = await fetchGemini(body.prompt, body.model, body.image);
-    return NextResponse.json({ message: response });
+    try {
+        // リクエストの内容をjsonにパース
+        const body = await req.json();
+        const response = await fetchGemini(body.prompt, body.model, body.image);
+        return NextResponse.json({ message: response });
+    } catch (error) {
+        console.error(error);
+
+        return NextResponse.json(
+            { error: String(error) },
+            { status: 500 }
+        );
+    }
 }
 
 async function fetchGemini(prompt: string, model: string, image: ImageBase64): Promise<string | undefined> {
@@ -55,11 +62,10 @@ async function fetchGemini(prompt: string, model: string, image: ImageBase64): P
             },
         });
 
-        console.log(response.text);
         return response.text;
     } catch (error) {
         console.error(error);
-        return `エラー：${error}`
+        throw error
     }
 
 
