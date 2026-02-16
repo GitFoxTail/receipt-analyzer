@@ -22,6 +22,7 @@ export function ReceiptInput() {
     const [output, setOutput] = useState("");
     const [model, setModel] = useState("gemini-3-flash-preview")
     const [isLoading, setIsLoading] = useState(false);
+    const [isSending, setIsSending] = useState(false);
 
     const [store, setStore] = useState<string | null>(null);
     const [totalPrice, setTotalPrice] = useState<number | null>(null);
@@ -122,6 +123,16 @@ export function ReceiptInput() {
     const handleRemoveImage = () => {
         setBase64("");
         setPreviewUrl("");
+    }
+
+    const handleSave = async () => {
+        setIsSending(true);
+        await fetch("/api/save-receipt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(items),
+        });
+        setIsSending(false);
     }
 
     return (
@@ -294,7 +305,8 @@ export function ReceiptInput() {
                                                         (
                                                             sum: number,
                                                             item: { name: string, amount: number }
-                                                        ) => sum + item.amount, 0))
+                                                        ) => sum + item.amount, 0));
+                                                console.log(items)
                                             }}
                                         />
                                     </td>
@@ -303,6 +315,13 @@ export function ReceiptInput() {
                         })}
                     </tbody>
                 </table>
+                <button
+                    onClick={handleSave}
+                    className="border bg-gray-300 px-3 py-1 rounded-xl m-2"
+                >
+                    {isSending ? "送信中" : "送信"}
+                </button>
+                <a href="https://docs.google.com/spreadsheets/d/1aTr7avv72mkBYwP0WDauJBHw5DglyRThkQboFQGLzCs/edit?gid=0#gid=0" target="_blank" className="text-blue-700 underline">保存先リンク：Google Sheets</a>
             </div>
         </div>
     );
