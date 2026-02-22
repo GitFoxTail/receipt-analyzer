@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ImagePlus, Camera, Trash2 } from "lucide-react";
+import { Camera, Trash2 } from "lucide-react";
 
 interface Item {
     name: string;
@@ -25,9 +25,11 @@ export function ReceiptInput() {
     const [isSending, setIsSending] = useState(false);
 
     const [store, setStore] = useState<string | null>(null);
+    const [date, setDate] = useState<string | null>(null);
     const [totalPrice, setTotalPrice] = useState<number | null>(null);
     const [calculatedTotalPrice, setCalculatedTotalPrice] = useState<number | null>(null);
     const [items, setItems] = useState<Array<Item> | []>([]);
+    const [payer, setPayer] = useState<string>("");
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -100,6 +102,7 @@ export function ReceiptInput() {
             const message = JSON.parse(data.message);   // json
 
             setStore(message.store_name);
+            setDate(message.date.slice(0, 10));
             setItems(message.items);
             setTotalPrice(message.total);
             setCalculatedTotalPrice(
@@ -126,11 +129,19 @@ export function ReceiptInput() {
     }
 
     const handleSave = async () => {
+
+        const itemsWithMeta = items.map(item => ({
+            ...item,
+            store,
+            date,
+            payer
+        }));
+
         setIsSending(true);
         await fetch("/api/save-receipt", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(items),
+            body: JSON.stringify(itemsWithMeta),
         });
         setIsSending(false);
     }
@@ -242,6 +253,13 @@ export function ReceiptInput() {
             <div className="text-red-500 ml-2 text-sm">{output}</div>
             <div className="p-2">
                 {store && <p>購入店舗: <span>{store}</span></p>}
+                {date && <p>日付: <span>{date}</span></p>}
+                <select className="border rounded-lg w-3/4 text-black" onChange={(e) => setPayer(e.target.value)}>
+                    <option>{process.env.NEXT_PUBLIC_PAYER_1}</option>
+                    <option>{process.env.NEXT_PUBLIC_PAYER_2}</option>
+                    <option>{process.env.NEXT_PUBLIC_PAYER_3}</option>
+                    <option>{process.env.NEXT_PUBLIC_PAYER_4}</option>
+                </select>
                 <p>合計: <span>{totalPrice}</span>円</p>
                 <p>計算値: <span>{calculatedTotalPrice}</span>円</p>
                 {
@@ -251,6 +269,14 @@ export function ReceiptInput() {
                             : <p className="text-blue-700">× 不一致</p>
                     )
                 }
+
+                <button
+                    onClick={handleSave}
+                    className="border bg-gray-300 px-3 py-1 rounded-xl m-2"
+                >
+                    {isSending ? "送信中" : "送信"}
+                </button>
+                <a href="https://docs.google.com/spreadsheets/d/1aTr7avv72mkBYwP0WDauJBHw5DglyRThkQboFQGLzCs/edit?gid=0#gid=0" target="_blank" className="text-blue-700 underline">保存先リンク：Google Sheets</a>
 
                 <table className="w-full text-xs table-fixed">
                     <thead className="w-full">
@@ -315,13 +341,6 @@ export function ReceiptInput() {
                         })}
                     </tbody>
                 </table>
-                <button
-                    onClick={handleSave}
-                    className="border bg-gray-300 px-3 py-1 rounded-xl m-2"
-                >
-                    {isSending ? "送信中" : "送信"}
-                </button>
-                <a href="https://docs.google.com/spreadsheets/d/1aTr7avv72mkBYwP0WDauJBHw5DglyRThkQboFQGLzCs/edit?gid=0#gid=0" target="_blank" className="text-blue-700 underline">保存先リンク：Google Sheets</a>
             </div>
         </div>
     );

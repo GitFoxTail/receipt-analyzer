@@ -16,6 +16,7 @@ const receiptItemSchema = z.object({
 
 const receiptSchema = z.object({
     store_name: z.string().optional().describe("Name of the store"),
+    date: z.string().datetime().optional().describe("Purchase date in ISO8601 format"),
     items: z.array(receiptItemSchema).describe("Line items on the receipt."),
     total: z.number().describe("Final total amount paid."),
     currency: z.literal("JPY"),

@@ -10,6 +10,9 @@ export async function appendItemsToSheet(items: any[]) {
 
     // 配列 → 行データへ変換
     const rows = items.map((item) => [
+        item.store,
+        item.date,
+        item.payer,
         item.category,
         item.name,
         item.amount,
@@ -17,7 +20,7 @@ export async function appendItemsToSheet(items: any[]) {
 
     await sheets.spreadsheets.values.append({
         spreadsheetId: process.env.SPREADSHEET_ID!,
-        range: "シート1!A:C",
+        range: "シート1!A:F",
         valueInputOption: "USER_ENTERED",
         requestBody: {
             values: rows,
