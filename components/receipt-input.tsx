@@ -3,7 +3,11 @@
 import React, { useState } from "react";
 import { Camera, Trash2 } from "lucide-react";
 
-interface Item {
+import { ItemsTable } from "./items-table";
+import { ReceiptSummary } from "./receipt-summary";
+import { ModelSelector } from "./model-selector";
+
+export interface Item {
     name: string;
     amount: number;
     category: string;
@@ -22,14 +26,13 @@ export function ReceiptInput() {
     const [output, setOutput] = useState("");
     const [model, setModel] = useState("gemini-3-flash-preview")
     const [isLoading, setIsLoading] = useState(false);
-    const [isSending, setIsSending] = useState(false);
 
-    const [store, setStore] = useState<string | null>(null);
-    const [date, setDate] = useState<string | null>(null);
-    const [totalPrice, setTotalPrice] = useState<number | null>(null);
-    const [calculatedTotalPrice, setCalculatedTotalPrice] = useState<number | null>(null);
+    const [store, setStore] = useState<string>("");
+    const [date, setDate] = useState<string>("");
+    const [totalPrice, setTotalPrice] = useState<number>(0);
+    const [calculatedTotalPrice, setCalculatedTotalPrice] = useState<number>(0);
     const [items, setItems] = useState<Array<Item> | []>([]);
-    const [payer, setPayer] = useState<string>("");
+
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -119,52 +122,16 @@ export function ReceiptInput() {
         }
     }
 
-    const handleChangeModelSelector = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setModel(e.target.value);
-    }
-
     const handleRemoveImage = () => {
         setBase64("");
         setPreviewUrl("");
     }
 
-    const handleSave = async () => {
-
-        const itemsWithMeta = items.map(item => ({
-            ...item,
-            store,
-            date,
-            payer
-        }));
-
-        setIsSending(true);
-        await fetch("/api/save-receipt", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(itemsWithMeta),
-        });
-        setIsSending(false);
-    }
-
     return (
         <div className="flex flex-col gap-3">
             <h1 className="text-2xl p-2 bg-gray-700 text-white px-3">レシート構造化<span className="text-base ml-5">by Gemini API</span></h1>
-            <p ></p>
 
-            <h2 className="bg-gray-700 text-white px-3">モデル選択</h2>
-            <select
-                value={model}
-                onChange={handleChangeModelSelector}
-                className="border border-gray-300 mx-3"
-            >
-                <option value="gemini-3-flash-preview">Gemini 3 flash preview</option>
-                <option value="gemini-2.5-pro">Gemini 2.5 pro</option>
-                <option value="gemini-2.5-flash">Gemini 2.5 flash</option>
-                <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 flash preview</option>
-                <option value="gemini-2.5-flash-lite">Gemini 2.5 flash lite</option>
-                <option value="gemini-2.5-flash-lite-preview-09-2025">Gemini 2.5 flash lite preview</option>
-                <option value="gemma-3-27b-it">Gemma 3</option>
-            </select>
+            <ModelSelector model={model} setModel={setModel} />
 
             <h2 className="bg-gray-700 text-white px-3">レシート入力</h2>
             <form onSubmit={handleFileSubmit} className="grid grid-cols-4">
@@ -249,98 +216,13 @@ export function ReceiptInput() {
                 </div>
             </form>
 
+            {/* <ReceiptOutput /> */}
+
             <h2 className="bg-gray-700 text-white px-3">出力</h2>
             <div className="text-red-500 ml-2 text-sm">{output}</div>
             <div className="p-2">
-                {store && <p>購入店舗: <span>{store}</span></p>}
-                {date && <p>日付: <span>{date}</span></p>}
-                <select className="border rounded-lg w-3/4 text-black" onChange={(e) => setPayer(e.target.value)}>
-                    <option>{process.env.NEXT_PUBLIC_PAYER_1}</option>
-                    <option>{process.env.NEXT_PUBLIC_PAYER_2}</option>
-                    <option>{process.env.NEXT_PUBLIC_PAYER_3}</option>
-                    <option>{process.env.NEXT_PUBLIC_PAYER_4}</option>
-                </select>
-                <p>合計: <span>{totalPrice}</span>円</p>
-                <p>計算値: <span>{calculatedTotalPrice}</span>円</p>
-                {
-                    totalPrice != null && calculatedTotalPrice != null && (
-                        totalPrice === calculatedTotalPrice
-                            ? <p className="text-red-500">〇 一致</p>
-                            : <p className="text-blue-700">× 不一致</p>
-                    )
-                }
-
-                <button
-                    onClick={handleSave}
-                    className="border bg-gray-300 px-3 py-1 rounded-xl m-2"
-                >
-                    {isSending ? "送信中" : "送信"}
-                </button>
-                <a href="https://docs.google.com/spreadsheets/d/1aTr7avv72mkBYwP0WDauJBHw5DglyRThkQboFQGLzCs/edit?gid=0#gid=0" target="_blank" className="text-blue-700 underline">保存先リンク：Google Sheets</a>
-
-                <table className="w-full text-xs table-fixed">
-                    <thead className="w-full">
-                        <tr className="bg-gray-500 text-white h-8">
-                            <th className="w-1/4">カテゴリ</th>
-                            <th className="w-1/2">項目名</th>
-                            <th className="w-1/4">金額</th>
-                        </tr>
-                    </thead>
-                    <tbody className="w-full">
-                        {items.map((item: Item, index: number) => {
-                            return (
-                                <tr key={index} className="border-b border-gray-300 h-12">
-                                    <td className="text-start w-1/4">
-                                        <select
-                                            value={item.category}
-                                            onChange={(e) => {
-                                                const newItems: Array<Item> | [] = [...items];
-                                                newItems[index].category = e.target.value;
-                                                setItems(newItems);
-                                            }}
-                                            className="h-10 mx-1 border rounded border-gray-300"
-                                        >
-                                            <option value="food">🔴食費</option>
-                                            <option value="restaurant">🔴外食</option>
-                                            <option value="goods">🟢日用品</option>
-                                            <option value="child goods">🟢子育て</option>
-                                            <option value="other">⚪その他</option>
-                                        </select>
-                                    </td>
-                                    <td className="w-1/2 px-1">
-                                        <input
-                                            className="h-10 w-full border rounded border-gray-300"
-                                            value={item.name}
-                                            onChange={(e) => {
-                                                const newItems: Array<Item> | [] = [...items];
-                                                newItems[index].name = e.target.value;
-                                                setItems(newItems);
-                                            }}
-                                        />
-                                    </td>
-                                    <td className="w-1/4 px-1">
-                                        <input
-                                            className="h-10 w-full border rounded border-gray-300"
-                                            value={item.amount}
-                                            onChange={(e) => {
-                                                const newItems: Array<Item> | [] = [...items];
-                                                newItems[index].amount = Number(e.target.value);
-                                                setItems(newItems);
-                                                setCalculatedTotalPrice(
-                                                    items.reduce(
-                                                        (
-                                                            sum: number,
-                                                            item: { name: string, amount: number }
-                                                        ) => sum + item.amount, 0));
-                                                console.log(items)
-                                            }}
-                                        />
-                                    </td>
-                                </tr>
-                            )
-                        })}
-                    </tbody>
-                </table>
+                <ReceiptSummary items={items} output={output} store={store} date={date} totalPrice={totalPrice} calculatedTotalPrice={calculatedTotalPrice}/>
+                <ItemsTable items={items} setItems={setItems} setCalculatedTotalPrice={setCalculatedTotalPrice} />
             </div>
         </div>
     );
