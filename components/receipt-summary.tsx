@@ -12,7 +12,7 @@ type Props = {
 
 export function ReceiptSummary({ items, store, date, totalPrice, calculatedTotalPrice }: Props) {
 
-    const [payer, setPayer] = useState<string>("");
+    const [payer, setPayer] = useState<string>(process.env.NEXT_PUBLIC_PAYER_1 || "");
     const [isSending, setIsSending] = useState(false);
 
     const handleSave = async () => {
