@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Camera, Trash2 } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Camera, Trash2, StopCircle } from "lucide-react";
 
 import { ItemsTable } from "./items-table";
 import { ReceiptSummary } from "./receipt-summary";
@@ -33,6 +33,8 @@ export function ReceiptInput() {
     const [calculatedTotalPrice, setCalculatedTotalPrice] = useState<number>(0);
     const [items, setItems] = useState<Array<Item> | []>([]);
 
+    const abortControlerRef = useRef<AbortController | null>(null);
+
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -55,46 +57,41 @@ export function ReceiptInput() {
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
                 const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+                const b64 = jpegDataUrl.split(",")[1];
 
                 setPreviewUrl(jpegDataUrl);
-                setBase64(jpegDataUrl.split(",")[1]);
+                setBase64(b64);
+
+                submitImage(b64);
             }
             img.src = reader.result as string;
         }
         reader.readAsDataURL(file);
-    }
+    };
 
-    const handleFileSubmit = async (e: React.SyntheticEvent) => {
-        e.preventDefault();
-
-        if (base64 === "") {
-            setOutput("ファイルがアップロードされていません");
-            return;
-        } else {
-            setOutput("");
-        }
-
+    const submitImage = async (imageBase64: string) => {
+        setOutput("");
         setIsLoading(true);
 
+        const controller = new AbortController();
+        abortControlerRef.current = controller;
+
         const params = {
-            // prompt: input,
             prompt: defaultPrompt,
-            model: model,
+            model,
             image: {
-                data: base64,
+                data: imageBase64,
                 mimeType: "image/jpeg"
-            }
+            },
         };
 
         try {
-            const response = await fetch(
-                "/api/gemini-image",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(params),
-                }
-            );
+            const response = await fetch("/api/gemini-image", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(params),
+                signal: controller.signal,
+            });
 
             const data = await response.json();         // json
 
@@ -114,30 +111,44 @@ export function ReceiptInput() {
                         sum: number,
                         item: { name: string, amount: number, type: string }
                     ) => sum + item.amount, 0))
-            setIsLoading(false);
         } catch (error) {
-            console.error(error);
-            setOutput(error instanceof Error ? error.message : "unknown error");
+            if (error instanceof Error && error.name === "AbortError") {
+                setOutput("");
+            } else {
+                console.error(error);
+                setOutput(error instanceof Error ? error.message : "unknown error");
+            }
+        } finally {
             setIsLoading(false);
+            abortControlerRef.current = null;
         }
+    };
+
+    const handleAbort = () => {
+        abortControlerRef.current?.abort();
     }
 
     const handleRemoveImage = () => {
+        abortControlerRef.current?.abort();
         setBase64("");
         setPreviewUrl("");
+        setItems([]);
+        setOutput("");
     }
 
     return (
-        <div className="flex flex-col gap-3">
-            <h1 className="text-2xl p-2 bg-gray-700 text-white px-3">レシート構造化<span className="text-base ml-5">by Gemini API</span></h1>
+        <div className="flex flex-col px-4 text-gray-600">
+            <h1 className="text-3xl my-4 font-bold bg-blue-500 text-white p-2 rounded-xl text-center">
+                Receipt Analyzer !
+            </h1>
 
             <ModelSelector model={model} setModel={setModel} />
 
-            <h2 className="bg-gray-700 text-white px-3">レシート入力</h2>
-            <form onSubmit={handleFileSubmit} className="grid grid-cols-4">
-                <div className="flex col-span-3 mx-3">
+            <div className="py-2">
+                <h2 className="font-bold mb-2">Receipt Input</h2>
+                <div className="flex justify-center gap-2">
                     {!previewUrl && (
-                        <div className="flex w-full">
+                        <div className="flex w-full h-32">
                             <input
                                 id="file-upload"
                                 className="hidden"
@@ -145,15 +156,14 @@ export function ReceiptInput() {
                                 accept="image/*"
                                 onChange={handleFileChange}
                             />
-
                             <label
                                 htmlFor="file-upload"
                                 className="
                                     flex items-center justify-center gap-3
-                                    w-full h-14
-                                    bg-gradient-to-r from-gray-100 to-gray-200
-                                    border border-gray-200
-                                    rounded-2xl
+                                    w-full h-full
+                                    border border-3 border-gray-400
+                                    bg-gradient-to-b from-gray-100 to-gray-300
+                                    rounded-3xl
                                     shadow-md
                                     font-semibold text-gray-800
                                     cursor-pointer
@@ -164,10 +174,9 @@ export function ReceiptInput() {
                                 <Camera className="w-5 h-5 text-gray-700" />
                                 写真を追加
                             </label>
-
                         </div>
-
                     )}
+
                     {previewUrl && (
                         <div className="relative w-full flex justify-center">
                             <div className="h-32 overflow-y-auto rounded-xl border shadow-sm">
@@ -176,54 +185,59 @@ export function ReceiptInput() {
                                     alt="Preview"
                                     className="max-w-full h-auto" />
                             </div>
-                            <button
-                                type="button"
-                                className="
-                                    absolute top-2 right-2
-                                    bg-black/60 text-white rounded-full p-2
-                                    backdrop-blur-sm
-                                    hover:bg-black/80
-                                    active:scale-90
-                                    transition"
-                                onClick={handleRemoveImage}
-                            >
-                                <Trash2 size={18} />
-                            </button>
+                            {isLoading && (
+                                <div className="
+                                    absolute inset-0
+                                    flex flex-col items-center justify-center gap-2
+                                    bg-black/40 rounded-3xl backdrop-blur-sm
+                                ">
+                                    <span className="w-6 h-6 border-4 border-white/40 border-t-white rounded-full animate-spin" />
+                                    <button
+                                        type="button"
+                                        onClick={handleAbort}
+                                        className="
+                                            flex items-center gap-1
+                                            bg-red-500 hover:bg-red-600
+                                            text-white text-xs font-semibold
+                                            px-3 py-1.5 rounded-full
+                                            transition active:scale-95
+                                        "
+                                    >
+                                        <StopCircle size={14} />
+                                        中断
+                                    </button>
+                                </div>
+                            )}
+                            {!isLoading && (
+                                <button
+                                    type="button"
+                                    className="
+                                        absolute top-2 right-2
+                                        bg-black/60 text-white rounded-full p-2
+                                        backdrop-blur-sm hover:bg-black/80
+                                        active:scale-90 transition
+                                    "
+                                    onClick={handleRemoveImage}
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
                         </div>
                     )}
+                    </div>
 
-                </div>
-                <div className="flex flex-col gap-3 mx-2">
-                    <button
-                        type="submit"
-                        className={`
-                            border border-2
-                            rounded-2xl w-full h-12 text-sm font-bold
-                            cursor-pointer
-                            hover:bg-gray-300
-                            transition-all duration-150    
-                            ${base64 === "" ? "border-gray-300 bg-gray-200 text-gray-400" : "border-gray-500 bg-gray-200 text-gray-600 shadow-md active:scale-95"}
-                        `}
-                    >
-                        {isLoading
-                            ? <div className="flex">
-                                <span className="w-4 h-4 mx-1 border-4 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
-                                <span>生成中</span>
-                            </div>
-                            : <span>送信</span>
-                        }
-                    </button>
-                </div>
-            </form>
-
-            {/* <ReceiptOutput /> */}
-
-            <h2 className="bg-gray-700 text-white px-3">出力</h2>
-            <div className="text-red-500 ml-2 text-sm">{output}</div>
-            <div className="p-2">
-                <ReceiptSummary items={items} output={output} store={store} date={date} totalPrice={totalPrice} calculatedTotalPrice={calculatedTotalPrice}/>
-                <ItemsTable items={items} setItems={setItems} setCalculatedTotalPrice={setCalculatedTotalPrice} />
+                    {output && <p className="mt-2 text-red-500 text-sm">{output}</p>}
             </div>
+
+            {items.length > 0 &&
+                <>
+                    <h2 className="font-bold mb-2">Result</h2>
+                    <div className="px-2">
+                        <ReceiptSummary items={items} store={store} date={date} totalPrice={totalPrice} calculatedTotalPrice={calculatedTotalPrice} />
+                        <ItemsTable items={items} setItems={setItems} setCalculatedTotalPrice={setCalculatedTotalPrice} />
+                    </div>
+                </>
+            }
         </div>
     );
 }

@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 import { Item } from "./receipt-input";
+import { HardDriveUpload } from "lucide-react";
 
 type Props = {
     items: Item[];
-    output: string;
     store: string;
     date: string;
     totalPrice: number;
     calculatedTotalPrice: number;
 };
 
-export function ReceiptSummary({ items, output, store, date, totalPrice, calculatedTotalPrice }: Props) {
+export function ReceiptSummary({ items, store, date, totalPrice, calculatedTotalPrice }: Props) {
 
     const [payer, setPayer] = useState<string>("");
     const [isSending, setIsSending] = useState(false);
@@ -32,15 +32,17 @@ export function ReceiptSummary({ items, output, store, date, totalPrice, calcula
     }
 
     return (
-        <>
-            {store && <p>購入店舗: <span>{store}</span></p>}
-            {date && <p>日付: <span>{date}</span></p>}
-            <select className="border rounded-lg w-3/4 text-black" onChange={(e) => setPayer(e.target.value)}>
-                <option>{process.env.NEXT_PUBLIC_PAYER_1}</option>
-                <option>{process.env.NEXT_PUBLIC_PAYER_2}</option>
-                <option>{process.env.NEXT_PUBLIC_PAYER_3}</option>
-                <option>{process.env.NEXT_PUBLIC_PAYER_4}</option>
-            </select>
+        <div className="flex flex-col gap-2">
+            {store && <div className="text-3xl font-bold">{store}</div>}
+            {date && <div className=""><span className="text-xs bg-gray-200 px-2 rounded-full">{date.replace(/-/g, "/")}</span></div>}
+            <div className="">
+                <select className="border-t border-b border-gray-300" onChange={(e) => setPayer(e.target.value)}>
+                    <option>{process.env.NEXT_PUBLIC_PAYER_1}</option>
+                    <option>{process.env.NEXT_PUBLIC_PAYER_2}</option>
+                    <option>{process.env.NEXT_PUBLIC_PAYER_3}</option>
+                    <option>{process.env.NEXT_PUBLIC_PAYER_4}</option>
+                </select>
+            </div>
             <div className="bg-gray-800 text-white p-4 flex m-2 rounded-2xl shade">
                 <div className="w-3/4">
                     <div className="text-gray-400 text-xs">合計金額</div>
@@ -52,8 +54,8 @@ export function ReceiptSummary({ items, output, store, date, totalPrice, calcula
                         {
                             totalPrice != null && calculatedTotalPrice != null && (
                                 totalPrice === calculatedTotalPrice
-                                    ? <p className="text-red-500">〇 一致</p>
-                                    : <p className="text-blue-700">× 不一致</p>
+                                    ? <p className="text-red-500 font-bold">OK</p>
+                                    : <p className="text-blue-500 font-bold">NG</p>
                             )
                         }
                     </div>
@@ -61,13 +63,15 @@ export function ReceiptSummary({ items, output, store, date, totalPrice, calcula
 
             </div>
 
-            <button
-                onClick={handleSave}
-                className="border bg-gray-300 px-3 py-1 rounded-xl m-2"
-            >
-                {isSending ? "送信中" : "送信"}
-            </button>
-            <a href="https://docs.google.com/spreadsheets/d/1aTr7avv72mkBYwP0WDauJBHw5DglyRThkQboFQGLzCs/edit?gid=0#gid=0" target="_blank" className="text-blue-700 underline">保存先リンク：Google Sheets</a>
-        </>
+            <div className="flex items-center">
+                <button
+                    onClick={handleSave}
+                    className="border bg-gray-300 px-3 py-1 rounded-xl m-2"
+                >
+                    {isSending ? <div className="w-6 h-6 rounded-full border border-4 border-t-white brder-gray-200 animate-spin" /> : <HardDriveUpload />}
+                </button>
+                <a href="https://docs.google.com/spreadsheets/d/1aTr7avv72mkBYwP0WDauJBHw5DglyRThkQboFQGLzCs/edit?gid=0#gid=0" target="_blank" className="text-blue-700 underline">保存先リンク：Google Sheets</a>
+            </div>
+        </div>
     )
 }
