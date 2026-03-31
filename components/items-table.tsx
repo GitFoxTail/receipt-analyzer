@@ -1,26 +1,36 @@
 import { Item } from "./receipt-input";
 
 type Props = {
-  items: Item[];
-  setItems: React.Dispatch<React.SetStateAction<Item[]>>;
-  setCalculatedTotalPrice: React.Dispatch<React.SetStateAction<number>>;
+    items: Item[];
+    setItems: React.Dispatch<React.SetStateAction<Item[]>>;
+    setCalculatedTotalPrice: React.Dispatch<React.SetStateAction<number>>;
 };
 
-export function ItemsTable({items, setItems, setCalculatedTotalPrice}: Props) {
+export function ItemsTable({ items, setItems, setCalculatedTotalPrice }: Props) {
+
+    const handleRemoveItem = (index: number) => {
+        setItems(prevItems => {
+            const newItems = prevItems.filter((_item, i) => i !== index);
+            setCalculatedTotalPrice(newItems.reduce((sum, it) => sum + it.amount, 0));
+            return newItems;
+        });
+    }
+
     return (
         <table className="w-full text-xs table-fixed">
             <thead className="w-full">
                 <tr className="bg-gray-300 h-8">
-                    <th className="w-1/4">カテゴリ</th>
-                    <th className="w-1/2">項目名</th>
-                    <th className="w-1/4">金額</th>
+                    <th className="w-1/5">カテゴリ</th>
+                    <th className="w-2/5">項目名</th>
+                    <th className="w-1/5">金額</th>
+                    <th className="w-1/5">削除</th>
                 </tr>
             </thead>
             <tbody className="w-full">
                 {items.map((item: Item, index: number) => {
                     return (
                         <tr key={index} className="border-b border-gray-300 h-12">
-                            <td className="text-start w-1/4">
+                            <td className="text-start w-1/5">
                                 <select
                                     value={item.category}
                                     onChange={(e) => {
@@ -37,7 +47,7 @@ export function ItemsTable({items, setItems, setCalculatedTotalPrice}: Props) {
                                     <option value="other">⚪その他</option>
                                 </select>
                             </td>
-                            <td className="w-1/2 px-1">
+                            <td className="w-2/5 px-1">
                                 <input
                                     className="h-10 w-full"
                                     value={item.name}
@@ -48,7 +58,7 @@ export function ItemsTable({items, setItems, setCalculatedTotalPrice}: Props) {
                                     }}
                                 />
                             </td>
-                            <td className="w-1/4 px-1">
+                            <td className="w-1/5 px-1">
                                 <input
                                     className="h-10 w-full"
                                     value={item.amount}
@@ -65,6 +75,9 @@ export function ItemsTable({items, setItems, setCalculatedTotalPrice}: Props) {
                                         console.log(items)
                                     }}
                                 />
+                            </td>
+                            <td>
+                                <button className="w-1/5" onClick={() => handleRemoveItem(index)}>trash</button>
                             </td>
                         </tr>
                     )

@@ -6,11 +6,13 @@ type Props = {
     items: Item[];
     store: string;
     date: string;
+    setStore: React.Dispatch<React.SetStateAction<string>>;
+    setDate: React.Dispatch<React.SetStateAction<string>>;
     totalPrice: number;
     calculatedTotalPrice: number;
 };
 
-export function ReceiptSummary({ items, store, date, totalPrice, calculatedTotalPrice }: Props) {
+export function ReceiptSummary({ items, store, date, setStore, setDate, totalPrice, calculatedTotalPrice }: Props) {
 
     const [payer, setPayer] = useState<string>(process.env.NEXT_PUBLIC_PAYER_1 || "");
     const [isSending, setIsSending] = useState(false);
@@ -33,10 +35,22 @@ export function ReceiptSummary({ items, store, date, totalPrice, calculatedTotal
 
     return (
         <div className="flex flex-col gap-2">
-            {store && <div className="text-3xl font-bold">{store}</div>}
-            {date && <div className=""><span className="text-xs bg-gray-200 px-2 rounded-full">{date.replace(/-/g, "/")}</span></div>}
-            <div className="">
-                <select className="border-t border-b border-gray-300" onChange={(e) => setPayer(e.target.value)}>
+            <div className="text-sm text-white bg-gray-500 rounded-full px-3 w-fit">store</div>
+            <input
+                value={store}
+                onChange={(e) => setStore(e.target.value)}
+                className="text-2xl font-bold border-y py-1 border-gray-300 mb-4"
+            />
+            <div className="grid grid-cols-2 gap-2">
+                <div className="text-sm text-white bg-gray-500 rounded-full px-3 w-fit">date</div>
+                <div className="text-sm text-white bg-gray-500 rounded-full px-3 w-fit">payer</div>
+                <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="text-sm py-1 border-y border-gray-300 mb-4"
+                />
+                <select className="border-t border-b border-gray-300 mb-4" onChange={(e) => setPayer(e.target.value)}>
                     <option>{process.env.NEXT_PUBLIC_PAYER_1}</option>
                     <option>{process.env.NEXT_PUBLIC_PAYER_2}</option>
                     <option>{process.env.NEXT_PUBLIC_PAYER_3}</option>

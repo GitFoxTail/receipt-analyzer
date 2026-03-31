@@ -24,7 +24,7 @@ export function ReceiptInput() {
     const [base64, setBase64] = useState<string>("");
     const [previewUrl, setPreviewUrl] = useState<string>("");
     const [output, setOutput] = useState("");
-    const [model, setModel] = useState("gemini-3-flash-preview")
+    const [model, setModel] = useState("gemini-3.1-flash-lite-preview")
     const [isLoading, setIsLoading] = useState(false);
 
     const [store, setStore] = useState<string>("");
@@ -233,7 +233,7 @@ export function ReceiptInput() {
                 <>
                     <h2 className="font-bold mb-2">Result</h2>
                     <div className="px-2">
-                        <ReceiptSummary items={items} store={store} date={date} totalPrice={totalPrice} calculatedTotalPrice={calculatedTotalPrice} />
+                        <ReceiptSummary items={items} store={store} date={date} setStore={setStore} setDate={setDate} totalPrice={totalPrice} calculatedTotalPrice={calculatedTotalPrice} />
                         <ItemsTable items={items} setItems={setItems} setCalculatedTotalPrice={setCalculatedTotalPrice} />
                     </div>
                 </>
